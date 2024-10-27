@@ -12,7 +12,7 @@ namespace FormsGiocoCarte
     {
         protected Socket _clientSocket;
         public EndPoint _remoteEndPoint { get; set; }
-        protected List<byte[]> _listenHistory = new List<byte[]>();
+        protected List<string> _listenHistory = new List<string>();
         private string message;
         private bool listenTask;
         byte[] receivedBuffer;
@@ -124,7 +124,7 @@ namespace FormsGiocoCarte
             {
                 byte[] data = new byte[receive];
                 Array.Copy(receivedBuffer, data, receive); //non per riferimento
-                _listenHistory.Add((byte[])data.Clone());
+                _listenHistory.Add(Encoding.ASCII.GetString((byte[])data.Clone()));
                 RefreshListenHistory();
             }
 
@@ -143,7 +143,7 @@ namespace FormsGiocoCarte
         {
             try
             {
-                return Encoding.ASCII.GetString(_listenHistory[_listenHistory.Count - 1]);
+                return _listenHistory[_listenHistory.Count - 1];
             }
             catch
             {
@@ -155,7 +155,7 @@ namespace FormsGiocoCarte
         {
             try
             {
-                return Encoding.ASCII.GetString(_listenHistory[_listenHistory.Count - 2]);
+                return _listenHistory[_listenHistory.Count - 2];
             }
             catch
             {
