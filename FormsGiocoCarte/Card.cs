@@ -20,7 +20,7 @@ namespace FormsGiocoCarte
             InitializeComponent();
         }
 
-        private void LoadCard() 
+        private void LoadCard()
         {
             if (personaggio is CGuerriero)
                 pictureBox1.Image = Image.FromFile(PathToImages() + @"\cardknight.png");
@@ -30,6 +30,8 @@ namespace FormsGiocoCarte
                 pictureBox1.Image = Image.FromFile(PathToImages() + @"\cardmage.png");
 
             AtkLbl.Text = personaggio.attacca().ToString(); //no, non gestisco il caso in cui il mago faccia tanto danno per favore no nonoonnoooO
+            HpLbl.Text = personaggio.punti_vita.ToString();
+            label2.Text = personaggio.nome.ToString();
         }
         private void Card_Load(object sender, EventArgs e)
         {
@@ -42,22 +44,22 @@ namespace FormsGiocoCarte
             return tempDirInfo.Parent.Parent.Parent.FullName + @"\Resources\Images";
         }
 
-        public void UpdateValues() 
+        public void UpdateValues()
         {
             HpLbl.Text = personaggio.getVita().ToString();
         }
 
-        public void PrendiDanno(int danno) 
+        public void PrendiDanno(int danno)
         {
             personaggio.ricevi_danno(danno);
         }
 
-        public int Attacca() 
+        public int Attacca()
         {
             return personaggio.attacca();
         }
 
-        public bool eVivo() 
+        public bool eVivo()
         {
             if (personaggio.e_vivo())
                 return true;

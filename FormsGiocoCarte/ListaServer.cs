@@ -11,6 +11,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Newtonsoft.Json;
+using Clients;
 
 namespace FormsGiocoCarte
 {
@@ -57,19 +58,16 @@ namespace FormsGiocoCarte
         List<string> serverIps;
         private void InizializeServerList()
         {
-            CClient ServerListClient = new CClient(32850, false);
+            CUser ServerListClient = new CUser();
 
             string filepath = PathToFiles() + @"\ServerList.json";
 
-            if (!File.Exists(filepath))
-            {
-                File.Create(filepath).Close();
-            }
+            File.Create(filepath).Close();
 
-            ServerListClient.Send("get servers");
-            Task.Delay(500).Wait();
+            Task.Delay(250).Wait();
+            ServerListClient.Send(ComandiServer.GetServers, "");
             File.WriteAllText(filepath, ServerListClient.GetLastListen());
-            ServerListClient.Send("end connection");
+            ServerListClient.Send(ComandiServer.Disconnect, "");
 
             serverIps = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(filepath)); //il verdino mente come al solito
 
@@ -78,7 +76,7 @@ namespace FormsGiocoCarte
 
             for (int i = 0; i < serverIps.Count; i++)
             {
-                ServerPanel tempPanel = new ServerPanel(new IPEndPoint(IPAddress.Parse(serverIps[i]), 32850), i + 1);
+                ServerPanel tempPanel = new ServerPanel(new IPEndPoint(IPAddress.Parse(serverIps[i].Split([':'])[0]), int.Parse(serverIps[i].Split([':'])[1])), i + 1);
                 tempPanel.Parent = ServPnl;
                 tempPanel.Location = new Point(padding, startingHeight);
                 startingHeight += tempPanel.Height + 10;
@@ -88,37 +86,13 @@ namespace FormsGiocoCarte
 
         private void button1_Click(object sender, EventArgs e)
         {
-            CClient ServerListClient = new CClient(32850, false);
 
             for (int i = ServPnl.Controls.Count - 1; i >= 0; i--)
             {
                 ServPnl.Controls[i].Dispose();
             }
 
-            string filepath = PathToFiles() + @"\ServerList.json";
-
-            if (!File.Exists(filepath))
-            {
-                File.Create(filepath).Close();
-            }
-
-            ServerListClient.Send("get servers");
-            Task.Delay(500).Wait();
-            File.WriteAllText(filepath, ServerListClient.GetLastListen());
-            ServerListClient.Send("end connection");
-
-            serverIps = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(filepath)); //il verdino mente come al solito
-
-            int startingHeight = 10;
-            int padding = 10;
-
-            for (int i = 0; i < serverIps.Count; i++)
-            {
-                ServerPanel tempPanel = new ServerPanel(new IPEndPoint(IPAddress.Parse(serverIps[i]), 32850), i + 1);
-                tempPanel.Parent = ServPnl;
-                tempPanel.Location = new Point(startingHeight, padding);
-                startingHeight += tempPanel.Height + 10;
-            }
+            InizializeServerList();
         }
     }
 }

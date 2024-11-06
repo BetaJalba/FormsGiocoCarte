@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using Clients;
 
 namespace FormsGiocoCarte
 {
@@ -24,40 +25,24 @@ namespace FormsGiocoCarte
         {
             LoadForm();
             SetupClient();
-            await Task.Run(checkIfPaired);
-            CreaMatch();
         }
 
         EndPoint serverEp;
-        CClient client;
-        string newPort;
-        private Task checkIfPaired() 
+        CUser client;
+
+        public void CreaMatch(int matchId, int port) 
         {
-            while (true && !client.GetLastListen().Contains("port:"))
-            {
-                Task.Delay(200);
-            }
+            //label1.Text = "Opponent trovato!!\nIngresso match...";
 
-            newPort = client.GetLastListen();
-
-            serverEp = new IPEndPoint((serverEp as IPEndPoint).Address, int.Parse(newPort.Substring(6, 5)));
-            client.Send("end connection");
-
-            return Task.FromResult(0);
-        }
-
-        private void CreaMatch() 
-        {
-            label1.Text = "Opponent trovato!!\nIngresso match...";
-
-            Task.Delay(1000).Wait();
-            Match match = new Match(serverEp, int.Parse(newPort.Substring(0,1)));
+            serverEp = new IPEndPoint((serverEp as IPEndPoint).Address, port);
+            Match match = new Match(serverEp, matchId);
             match.ShowDialog();
         }
 
         private void SetupClient()
         {
-            client = new CClient(serverEp, true);
+            client = new CUser(serverEp as IPEndPoint);
+            client.OnNewMatch += CreaMatch;
         }
 
         private void LoadForm()
@@ -92,14 +77,14 @@ namespace FormsGiocoCarte
 
         private void button2_Click(object sender, EventArgs e)
         {
-            client.Send("leave queue");
+            client.Send(ComandiServer.LeaveQueue, "");
             ServerPnl.Visible = true;
             panel1.Visible = false;
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            client.Send("enter queue");
+            client.Send(ComandiServer.EnterQueue, "");
             ServerPnl.Visible = false;
             panel1.Visible = true;
         }

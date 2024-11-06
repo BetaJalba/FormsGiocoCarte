@@ -28,20 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
-            PlayerLbl = new Label();
             IpLbl = new Label();
             CountLbl = new Label();
             JoinBtn = new Button();
             SuspendLayout();
-            // 
-            // PlayerLbl
-            // 
-            PlayerLbl.AutoSize = true;
-            PlayerLbl.Location = new Point(144, 58);
-            PlayerLbl.Name = "PlayerLbl";
-            PlayerLbl.Size = new Size(92, 20);
-            PlayerLbl.TabIndex = 7;
-            PlayerLbl.Text = "Players: 5/16";
             // 
             // IpLbl
             // 
@@ -63,7 +53,7 @@
             // 
             // JoinBtn
             // 
-            JoinBtn.Location = new Point(144, 81);
+            JoinBtn.Location = new Point(189, 81);
             JoinBtn.Name = "JoinBtn";
             JoinBtn.Size = new Size(94, 29);
             JoinBtn.TabIndex = 4;
@@ -75,20 +65,17 @@
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            Controls.Add(PlayerLbl);
             Controls.Add(IpLbl);
             Controls.Add(CountLbl);
             Controls.Add(JoinBtn);
             Name = "ServerPanel";
-            Size = new Size(241, 118);
+            Size = new Size(294, 118);
             Load += ServerPanel_Load;
             ResumeLayout(false);
             PerformLayout();
         }
 
         #endregion
-
-        private Label PlayerLbl;
         private Label IpLbl;
         private Label CountLbl;
         private Button JoinBtn;

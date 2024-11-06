@@ -11,6 +11,8 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Newtonsoft.Json;
+using Clients;
+using GameServer;
 
 namespace FormsGiocoCarte
 {
@@ -20,15 +22,18 @@ namespace FormsGiocoCarte
         {
             gameEp = ep;
             this.matchId = matchId;
+            client = new CUser(gameEp as IPEndPoint, matchId);
+            client.OnUpdate += Client_OnUpdate;
+            Task.Delay(500).Wait();
             InitializeComponent();
         }
 
         EndPoint gameEp;
-        CClient client;
+        CUser client;
         int matchId;
 
-        public CPersonaggio[] mazzo;
-        public CPersonaggio[] mazzoNemico;
+        public CPersonaggio[]? mazzo;
+        public CPersonaggio[]? mazzoNemico;
 
         List<string> nomiMaghi = new List<string> { "Ubaldo", "Gerry", "Cobra", "Tate", "Nasa", "Rennala", "Ranni", "Ren", "Seluvis", "Radahn" };
         List<string> nomiGuerrieri = new List<string> { "Pippo, Ippopotamo III", "Alexander", "Alexander suo figlio", "Malenia", "Sir. Gideon Ofnir", "NonSoComeScriverlo Loux", "Godfrey the other Grafted", "Soldier of God, Rick", "Meteorick Beast" };
@@ -38,18 +43,89 @@ namespace FormsGiocoCarte
 
         private void Match_Load(object sender, EventArgs e)
         {
-            client = new CClient(gameEp, true);
-            client.Send(matchId.ToString());
-
-            while (client.GetLastListen() == "-1" || !int.TryParse(client.GetLastListen(), out matchId)) 
-            {
-                Task.Delay(103).Wait(); 
-            }
-
             mazzo = new CPersonaggio[10];
             GeneraMazzo(mazzo);
             mazzoNemico = GetMazzoNemico();
             DisegnaArena(mazzo, mazzoNemico);
+            Partita(client.Starts);
+        }
+
+        bool scelto;
+        string nomeScelto;
+
+        async void Partita(bool starts) 
+        {
+            if (starts) 
+            {
+                //sceglie 2 carte
+                scelto = false;
+                label4.Text = "Scegli la prima carta, inizi tu!";
+
+                int index1 = -1;
+
+                do
+                {
+                    await CompletedNome(); //attende che venga scelto
+                    index1 = -1;
+                    for (int i = 0; i < 10; i++)
+                        if (mazzo[i].nome == nomeScelto)
+                            index1 = i;
+                } while (index1 == -1 || !mazzo[index1].e_vivo());
+
+                label4.Text = "Scegli la seconda carta!";
+
+                int index2;
+
+                do
+                {
+                    await CompletedNome(); //attende che venga scelto
+                    index2 = -1;
+                    for (int i = 0; i < 10; i++)
+                        if (mazzoNemico[i].nome == nomeScelto)
+                            index1 = i;
+                } while (index1 == -1 || !mazzoNemico[index2].e_vivo());
+
+                //manda messaggio
+
+                // Comando attacco | Indice match | Indice Attaccante | Indice Difensore
+                client.Send(ComandiMatch.SendMove, $"{client.MatchId}{index1}{index2}");
+            }
+        }
+
+        private void Client_OnUpdate(int mazzo, int personaggio, int attaccante)
+        {
+            if (mazzo == 1) 
+            {
+                this.mazzo[personaggio].punti_vita -= mazzoNemico[attaccante].attacca();
+            }
+            else if (mazzo == 2) 
+            {
+                mazzoNemico[personaggio].punti_vita = this.mazzo[attaccante].attacca();
+            }
+
+            // controllo vincita
+            bool vivo1 = false, vivo2 = false;
+            for (int i = 0; i < 10; i++)
+            {
+                if (this.mazzo[i].e_vivo())
+                    vivo1 = true;
+                if (mazzoNemico[i].e_vivo())
+                    vivo2 = true;
+            }
+
+            if (!vivo1)
+            {
+                //giocatore 2 vince
+            }
+            else if (!vivo2)
+            {
+                //giocatore 1 vince
+            }
+        }
+
+        public Task CompletedNome()
+        {
+            return Task.CompletedTask;
         }
 
         void GeneraMazzo(CPersonaggio[] mazzo)
@@ -85,54 +161,63 @@ namespace FormsGiocoCarte
             }
         }
 
-        CPersonaggio[] GetMazzoNemico() 
+        CPersonaggio[]? GetMazzoNemico() 
         {
             Random rand = new Random();
             var jset = new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.All };
 
-            //per rendere i messaggi più contenuti
-            CPersonaggio[] primo = new CPersonaggio[5];
-            CPersonaggio[] secondo = new CPersonaggio[5];
+            //_per rendere i messaggi più contenuti_ NO AHAHAH SPEDISCO TUTTO
+            CPersonaggio[]? otherMazzo = new CPersonaggio[10];
 
-            Array.Copy(mazzo, primo, primo.Length);
-            Array.Copy(mazzo, mazzo.Length / 2, secondo, 0, secondo.Length);
+            client.Send(ComandiMatch.SendDeck, client.MatchId.ToString("0") + JsonConvert.SerializeObject(mazzo, Formatting.Indented, jset));
+            Task.Delay(100).Wait();
+            otherMazzo = JsonConvert.DeserializeObject<CPersonaggio[]>(client.GetLastListen(), new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
 
-            Task.Delay(rand.Next(20000));
-
-            client.Send($"{matchId}m:" + JsonConvert.SerializeObject(primo, Formatting.Indented, jset));
-            Task.Delay(100);
-            client.Send($"{matchId}m:" + JsonConvert.SerializeObject(secondo, Formatting.Indented, jset));
-
-            while (!client.GetLastListen().Contains('[') || !client.GetSecondToLastListen().Contains('['))
-                Task.Delay(150).Wait();
-
-            CPersonaggio[] otherMazzo1 = JsonConvert.DeserializeObject<CPersonaggio[]>(client.GetSecondToLastListen(), jset);
-            CPersonaggio[] otherMazzo2 = JsonConvert.DeserializeObject<CPersonaggio[]>(client.GetLastListen(), jset);
-
-            return otherMazzo1.Union(otherMazzo2).ToArray();
+            return otherMazzo;
         }
 
         void DisegnaArena(CPersonaggio[] mazzo, CPersonaggio[] mazzoNemico) 
         {
-            Point myLocation = panel2.Location;
-            Point enemyLocation = panel3.Location;
 
             int k = 0;
             foreach (CPersonaggio personaggio in mazzo) 
             {
                 Card carta = new Card(personaggio);
+                carta.Click += Carta_Click;
                 carta.Parent = panel2;
-                carta.Location = new Point(myLocation.X + 10 + k, myLocation.Y + 10);
+                carta.Location = new Point(5 + k, 13);
                 k += carta.Width + 10;
             }
             k = 0;
             foreach (CPersonaggio personaggio in mazzoNemico) 
             {
                 Card carta = new Card(personaggio);
+                carta.Click += CartaNemica_Click;
                 carta.Parent = panel3;
-                carta.Location = new Point(enemyLocation.X + 10 + k, enemyLocation.Y + 10);
+                carta.Location = new Point(5 + k, 13);
                 k += carta.Width + 10;
             }
+        }
+
+        private void Carta_Click(object? sender, EventArgs e)
+        {
+            if (scelto)
+                return;
+            nomeScelto = (sender as Card).Name;
+            scelto = true;
+            CompletedNome();
+        }
+
+        private void CartaNemica_Click(object? sender, EventArgs e)
+        {
+            if (!scelto)
+                return;
+            nomeScelto = (sender as Card).Name;
+            scelto = false;
+            CompletedNome();
         }
     }
 }
